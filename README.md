@@ -1,3 +1,3 @@
 # ONYX_server
 
-clone repo and run using npm start
+clone repo, install packages using npm install, and run using npm start
