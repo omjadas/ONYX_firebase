@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/COMP30022-18/ONYX_server/issues"
   },
-  "homepage": "https://github.com/COMP30022-18/ONYX_server#readme"
+  "homepage": "https://github.com/COMP30022-18/ONYX_server#readme",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
 }
