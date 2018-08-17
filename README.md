@@ -3,11 +3,11 @@ Install firebase tools using npm as admin
 ```
 npm i -g firebase-tools
 ```
-Run 
+Then run 
 ```
 firebase login
 ```
-Navigate to functions directory and run 
+Finally navigate to functions directory and run 
 ```
 npm i --dev
 ```
