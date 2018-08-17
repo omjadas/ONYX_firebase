@@ -1,4 +1,13 @@
 # ONYX_firebase
-Install firebase tools using "npm i -g firebase-tools"<br>
-Run "firebase login"<br>
-Run "npm i" inside functions directory<br>
+Install firebase tools using as admin
+```
+npm i -g firebase-tools
+```
+Run 
+```
+firebase login
+```
+Navigate to functions directory and run 
+```
+npm i --dev
+```
