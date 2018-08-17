@@ -1,5 +1,5 @@
 # ONYX_firebase
-Install firebase tools using as admin
+Install firebase tools using npm as admin
 ```
 npm i -g firebase-tools
 ```
