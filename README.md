@@ -9,5 +9,5 @@ firebase login
 ```
 Finally navigate to functions directory and run 
 ```
-npm i --dev
+npm i && npm i --only=dev
 ```
