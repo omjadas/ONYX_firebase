@@ -11,3 +11,7 @@ Finally navigate to functions directory and run
 ```
 npm i
 ```
+To deploy any changes made to Firebase run
+```
+firebase deploy
+```
