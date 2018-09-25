@@ -7,6 +7,7 @@ admin.initializeApp();
 // // https://firebase.google.com/docs/functions/write-firebase-functions
 
 exports.requestCarer = functions.https.onCall((data, context) => {
+    var radius = 500;
     var db = admin.firestore();
     var user = db.collection('users').doc(context.auth.uid).get()
         .then(user => {
@@ -23,23 +24,39 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         });
 
     var carers = user.then(user => {
-        console.log(user.currentLocation);
-        return db.collection('users').where('isCarer','==',true).where('currentLocation','==',user.currentLocation).get()
+        var currentLocation = geoPointToGeolib(user.currentLocation);
+        var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
+        var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
+        return db.collection('users').where('isCarer', '==', true)
+            .where('currentLocation', '>=', new admin.firestore.GeoPoint(small.latitude, small.longitude))
+            .where('currentLocation', '<=', new admin.firestore.GeoPoint(large.latitude, large.longitude)).get();
     });
 
     return Promise.all([user, carers])
         .then(([user, carers]) => {
-            carers.forEach(carer => {
-                var message = {
-                    data: {
-                        type: 'carerRequest',
-                        sender: user.id
-                    },
-                    token: carer.get('firebaseToken')
-                };
-                console.log(message);
-                admin.messaging().send(message)
-            })
-            return;
+            if (carers.size) {
+                carers.forEach(carer => {
+                    if (geolib.getDistance(geoPointToGeolib(user.currentLocation), carer.get(currentLocation) < radius)) {
+                        var message = {
+                            data: {
+                                type: 'carerRequest',
+                                sender: user.id
+                            },
+                            token: carer.get('firebaseToken')
+                        };
+                        admin.messaging().send(message)
+                    }
+                });
+                return "Waiting for carer";
+            } else {
+                return "No carers found";
+            }
         }).catch();
 });
+
+function geoPointToGeolib(geopoint) {
+    return {
+        latitude: geopoint.latitude,
+        longitude: geopoint.longitude
+    }
+}
