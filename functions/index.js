@@ -30,7 +30,11 @@ exports.chatNotification = functions.firestore
             .then(user => {
                 var fcm = {
                     data: {
-                        // TODO: add data
+                        title: message.sender,
+                        message: message.message,
+                        username: message.sender,
+                        uid: message.senderUid
+                        //TODO: add fcm_token
                     },
                     token: user.get('firebaseToken')
                 }
