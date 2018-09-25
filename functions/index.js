@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const geolib = require('geolib');
 admin.initializeApp();
 
 // // Create and Deploy Your First Cloud Functions
@@ -8,13 +9,13 @@ admin.initializeApp();
 exports.requestCarer = functions.https.onCall((data, context) => {
     var db = admin.firestore();
     var user = db.collection('users').doc(context.auth.uid).get()
-        .then(doc => {
-            if (!doc.exists) {
+        .then(user => {
+            if (!user.exists) {
                 console.log('No such document!');
                 return null;
             } else {
-                console.log('Document data:', doc.data());
-                return doc.data();
+                console.log('Document data:', user.data());
+                return user.data();
             }
         })
         .catch(err => {
@@ -22,7 +23,9 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         });
 
     var carers = user.then(user => {
-        return db.collection('users').where('isCarer','==','true').where('currentLocation' > user.currentLocation).get()
+        console.log(JSON.stringify(user.currentLocation));
+
+        return db.collection('users').where('isCarer','==',true).where('currentLocation','==',user.currentLocation).get()
     });
 
     Promise.all([user, carers])
