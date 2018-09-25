@@ -24,11 +24,10 @@ exports.requestCarer = functions.https.onCall((data, context) => {
 
     var carers = user.then(user => {
         console.log(JSON.stringify(user.currentLocation));
-
         return db.collection('users').where('isCarer','==',true).where('currentLocation','==',user.currentLocation).get()
     });
 
-    Promise.all([user, carers])
+    return Promise.all([user, carers])
         .then(([user, carers]) => {
             carers.forEach(carer => {
                 // check if carer is close to user and send message
