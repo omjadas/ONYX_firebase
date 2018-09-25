@@ -36,11 +36,12 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         .then(([user, carers]) => {
             if (carers.size) {
                 carers.forEach(carer => {
-                    if (geolib.getDistance(geoPointToGeolib(user.data().currentLocation), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
+                    if (geolib.getDistance(geoPointToGeolib(user.get(currentLocation)), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
                         var message = {
                             data: {
                                 type: 'carerRequest',
-                                sender: user.id
+                                senderId: user.id,
+                                senderName: user.get('firstName')
                             },
                             token: carer.get('firebaseToken')
                         };
