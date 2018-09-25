@@ -23,14 +23,22 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         });
 
     var carers = user.then(user => {
-        console.log(JSON.stringify(user.currentLocation));
+        console.log(user.currentLocation);
         return db.collection('users').where('isCarer','==',true).where('currentLocation','==',user.currentLocation).get()
     });
 
     return Promise.all([user, carers])
         .then(([user, carers]) => {
             carers.forEach(carer => {
-                // check if carer is close to user and send message
+                var message = {
+                    data: {
+                        type: 'carerRequest',
+                        sender: user.id
+                    },
+                    token: carer.get('firebaseToken')
+                };
+                console.log(message);
+                admin.messaging().send(message)
             })
             return;
         }).catch();
