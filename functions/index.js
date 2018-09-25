@@ -16,7 +16,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
                 return null;
             } else {
                 console.log('Document data:', user.data());
-                return user.data();
+                return user;
             }
         })
         .catch(err => {
@@ -24,7 +24,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         });
 
     var carers = user.then(user => {
-        var currentLocation = geoPointToGeolib(user.currentLocation);
+        var currentLocation = geoPointToGeolib(user.data().currentLocation);
         var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
         var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
         return db.collection('users').where('isCarer', '==', true)
@@ -36,7 +36,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         .then(([user, carers]) => {
             if (carers.size) {
                 carers.forEach(carer => {
-                    if (geolib.getDistance(geoPointToGeolib(user.currentLocation), carer.get(currentLocation) < radius)) {
+                    if (geolib.getDistance(geoPointToGeolib(user.data().currentLocation), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
                         var message = {
                             data: {
                                 type: 'carerRequest',
