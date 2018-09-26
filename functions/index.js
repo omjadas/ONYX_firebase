@@ -101,8 +101,6 @@ exports.chatNotification = functions.firestore
 exports.addContact = functions.https.onCall((data, context) => {
     var db = admin.firestore();
     var userRefs = db.collection('users');
-    console.log('safhdjaskhdjksa');
-    console.log('email' + data.email);
 
     var user = userRefs.where('email', '==', data.email).get()
         .then(users => {
