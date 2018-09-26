@@ -97,21 +97,40 @@ exports.chatNotification = functions.firestore
             })
             .catch();
     })
-	
+
 exports.addContact = functions.https.onCall((data, context) => {
-	var db = admin.firestore();
+    var db = admin.firestore();
     var userRefs = db.collection('users');
     console.log('safhdjaskhdjksa');
     console.log('email' + data.email);
-	return userRefs.where('email', '==', data.email).get()
+
+    var user = userRefs.where('email', '==', data.email).get()
         .then(users => {
-            console.log(users);
+            var returnUser = null;
             users.forEach(user => {
-                console.log(user);
-                userRefs.doc(context.auth.uid).collection('contacts').doc().set({userRef: user.id});
-                userRefs.doc(user.id).collection('contacts').doc().set({userRef: context.auth.uid});
+                returnUser = user;
             });
-            return 'null';
+            return returnUser;
+        })
+
+    var alreadyAdded = user.then(user => {
+        return db.collection('users').doc(context.auth.uid).collection('contacts').doc(user.id).get()
+    })
+        .then((docSnapshot) => {
+            if (docSnapshot.exists) {
+                return true;
+            }
+            return false;
+        })
+
+    return Promise.all([user, alreadyAdded])
+        .then(([user, alreadyAdded]) => {
+            if (!alreadyAdded) {
+                userRefs.doc(context.auth.uid).collection('contacts').doc(user.id).set({ userRef: user.id });
+                userRefs.doc(user.id).collection('contacts').doc(context.auth.uid).set({ userRef: context.auth.uid });
+                return data.email + ' added to contacts';
+            }
+            return data.email + ' already in contacts';
         })
         .catch();
 })
