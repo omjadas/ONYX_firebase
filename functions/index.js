@@ -36,7 +36,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         .then(([user, carers]) => {
             if (carers.size) {
                 carers.forEach(carer => {
-                    if (geolib.getDistance(geoPointToGeolib(user.get(currentLocation)), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
+                    if (geolib.getDistance(geoPointToGeolib(user.get("currentLocation")), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
                         var message = {
                             data: {
                                 type: 'carerRequest',
@@ -68,7 +68,7 @@ exports.chatNotification = functions.firestore
         const message = snap.data();
         var db = admin.firestore();
 
-        db.collection('users').doc(message.receiverUid).get()
+        return db.collection('users').doc(message.receiverUid).get()
             .then(receiver => {
                 if (!receiver.exists) {
                     console.log('No such document!');
