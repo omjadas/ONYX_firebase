@@ -30,6 +30,7 @@ exports.chatNotification = functions.firestore
             .then(user => {
                 var fcm = {
                     data: {
+                        type: "chat",
                         title: message.sender,
                         message: message.message,
                         username: message.sender,
