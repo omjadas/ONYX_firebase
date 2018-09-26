@@ -68,7 +68,7 @@ exports.chatNotification = functions.firestore
         const message = snap.data();
         var db = admin.firestore();
 
-        db.collection('users').doc(message.receiverUid).get()
+        return db.collection('users').doc(message.receiverUid).get()
             .then(receiver => {
                 if (!receiver.exists) {
                     console.log('No such document!');
