@@ -49,10 +49,9 @@ exports.chatNotification = functions.firestore
                     data: {
                         type: "chat",
                         title: message.sender,
-                        message: message.message,
+                        text: message.message,
                         username: message.sender,
-                        uid: message.senderUid,
-                        fcm_token: sender.get('firebaseToken')
+                        uid: message.senderUid
                     },
                     token: receiver.get('firebaseToken')
                 }
