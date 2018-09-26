@@ -97,3 +97,17 @@ exports.chatNotification = functions.firestore
             })
             .catch();
     })
+	
+exports.addContacts = functions.https.onCall((data, context) => {
+	var db = admin.firestore();
+	var users = db.collection('users');
+	var contacts = users.document(context.auth.uid).collection('contacts');
+	
+	users.where('email', '==', data.email)
+	.then(user => {
+		contacts.document().set({userRef: user.id});
+		users.document(user.id).collection('contacts').document().set({userRef: context.auth.uid});
+		return null;
+	})
+	.catch();
+})
