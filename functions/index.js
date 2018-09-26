@@ -98,16 +98,20 @@ exports.chatNotification = functions.firestore
             .catch();
     })
 	
-exports.addContacts = functions.https.onCall((data, context) => {
+exports.addContact = functions.https.onCall((data, context) => {
 	var db = admin.firestore();
-	var users = db.collection('users');
-	var contacts = users.document(context.auth.uid).collection('contacts');
-	
-	users.where('email', '==', data.email)
-	.then(user => {
-		contacts.document().set({userRef: user.id});
-		users.document(user.id).collection('contacts').document().set({userRef: context.auth.uid});
-		return null;
-	})
-	.catch();
+    var userRefs = db.collection('users');
+    console.log('safhdjaskhdjksa');
+    console.log('email' + data.email);
+	return userRefs.where('email', '==', data.email).get()
+        .then(users => {
+            console.log(users);
+            users.forEach(user => {
+                console.log(user);
+                userRefs.doc(context.auth.uid).collection('contacts').doc().set({userRef: user.id});
+                userRefs.doc(user.id).collection('contacts').doc().set({userRef: context.auth.uid});
+            });
+            return 'null';
+        })
+        .catch();
 })
