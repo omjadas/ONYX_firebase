@@ -15,21 +15,7 @@ exports.chatNotification = functions.firestore
         const message = snap.data();
         var db = admin.firestore();
 
-        var sender = db.collection('users').doc(message.senderUid).get()
-            .then(sender => {
-                if (!sender.exists) {
-                    console.log('No such document!');
-                    return null;
-                } else {
-                    console.log('Document data:', sender.data());
-                    return sender;
-                }
-            })
-            .catch(err => {
-                console.log('Error getting document', err);
-            })
-
-        var receiver = db.collection('users').doc(message.receiverUid).get()
+        db.collection('users').doc(message.receiverUid).get()
             .then(receiver => {
                 if (!receiver.exists) {
                     console.log('No such document!');
@@ -42,9 +28,7 @@ exports.chatNotification = functions.firestore
             .catch(err => {
                 console.log('Error getting document', err);
             })
-
-        Promise.all([sender, receiver])
-            .then(([sender, receiver]) => {
+            .then(receiver => {
                 var fcm = {
                     data: {
                         type: "chat",
