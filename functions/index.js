@@ -27,7 +27,9 @@ exports.requestCarer = functions.https.onCall((data, context) => {
         var currentLocation = geoPointToGeolib(user.data().currentLocation);
         var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
         var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
-        return db.collection('users').where('isCarer', '==', true)
+        return db.collection('users')
+            .where('isCarer', '==', true)
+            .where('isOnline', '==', true)
             .where('currentLocation', '>=', new admin.firestore.GeoPoint(small.latitude, small.longitude))
             .where('currentLocation', '<=', new admin.firestore.GeoPoint(large.latitude, large.longitude)).get();
     });
