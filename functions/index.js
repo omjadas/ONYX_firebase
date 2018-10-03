@@ -34,7 +34,9 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
         var currentLocation = geoPointToGeolib(user.data().currentLocation);
         var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
         var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
-        return db.collection('users').where('isCarer', '==', true)
+        return db.collection('users')
+            .where('isCarer', '==', true)
+            .where('isOnline', '==', true)
             .where('currentLocation', '>=', new admin.firestore.GeoPoint(small.latitude, small.longitude))
             .where('currentLocation', '<=', new admin.firestore.GeoPoint(large.latitude, large.longitude)).get();
     });
@@ -43,7 +45,7 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
         .then(([user, carers]) => {
             if (carers.size) {
                 carers.forEach(carer => {
-                    if (geolib.getDistance(geoPointToGeolib(user.get(currentLocation)), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
+                    if (geolib.getDistance(geoPointToGeolib(user.get("currentLocation")), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
                         var message = {
                             data: {
                                 type: type,
@@ -76,7 +78,7 @@ exports.chatNotification = functions.firestore
         const message = snap.data();
         var db = admin.firestore();
 
-        db.collection('users').doc(message.receiverUid).get()
+        return db.collection('users').doc(message.receiverUid).get()
             .then(receiver => {
                 if (!receiver.exists) {
                     console.log('No such document!');
@@ -107,19 +109,36 @@ exports.chatNotification = functions.firestore
     });
 	
 exports.addContact = functions.https.onCall((data, context) => {
-	var db = admin.firestore();
+    var db = admin.firestore();
     var userRefs = db.collection('users');
-    console.log('safhdjaskhdjksa');
-    console.log('email' + data.email);
-	return userRefs.where('email', '==', data.email).get()
+
+    var user = userRefs.where('email', '==', data.email).get()
         .then(users => {
-            console.log(users);
+            var returnUser = null;
             users.forEach(user => {
-                console.log(user);
-                userRefs.doc(context.auth.uid).collection('contacts').doc().set({userRef: user.id});
-                userRefs.doc(user.id).collection('contacts').doc().set({userRef: context.auth.uid});
+                returnUser = user;
             });
-            return 'null';
+            return returnUser;
+        })
+
+    var alreadyAdded = user.then(user => {
+        return db.collection('users').doc(context.auth.uid).collection('contacts').doc(user.id).get()
+    })
+        .then((docSnapshot) => {
+            if (docSnapshot.exists) {
+                return true;
+            }
+            return false;
+        })
+
+    return Promise.all([user, alreadyAdded])
+        .then(([user, alreadyAdded]) => {
+            if (!alreadyAdded) {
+                userRefs.doc(context.auth.uid).collection('contacts').doc(user.id).set({ userRef: user.id });
+                userRefs.doc(user.id).collection('contacts').doc(context.auth.uid).set({ userRef: context.auth.uid });
+                return data.email + ' added to contacts';
+            }
+            return data.email + ' already in contacts';
         })
         .catch();
 });
