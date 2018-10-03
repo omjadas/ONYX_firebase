@@ -51,7 +51,8 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
                                 type: type,
                                 senderId: user.id,
                                 senderName: user.get('firstName'),
-                                senderLocation: user.get('currentLocation'),
+                                senderLatitude: user.get('currentLocation').latitude.toString(),
+                                senderLongitude: user.get('currentLocation').longitude.toString(),
                             },
                             token: carer.get('firebaseToken')
                         };
