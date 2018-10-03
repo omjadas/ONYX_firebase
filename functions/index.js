@@ -11,7 +11,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
 });
 
 exports.sendSOS = functions.https.onCall((data, context) => {
-    return sendFCMMessage(1000, 'sos', 'Help is on the way', 'No carers found', data, context);
+    return sendFCMMessage(1000, 'SOS', 'Help is on the way', 'No carers found', data, context);
 });
 
 function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, context) {
