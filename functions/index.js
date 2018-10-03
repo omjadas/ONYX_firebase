@@ -7,7 +7,14 @@ admin.initializeApp();
 // // https://firebase.google.com/docs/functions/write-firebase-functions
 
 exports.requestCarer = functions.https.onCall((data, context) => {
-    var radius = 500;
+    return sendFCMMessage(500, 'carerRequest', 'Waiting for carer', 'No carers found', data, context);
+});
+
+exports.sendSOS = functions.https.onCall((data, context) => {
+    return sendFCMMessage(1000, 'sos', 'Help is on the way', 'No carers found', data, context);
+});
+
+function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, context) {
     var db = admin.firestore();
     var user = db.collection('users').doc(context.auth.uid).get()
         .then(user => {
@@ -39,21 +46,22 @@ exports.requestCarer = functions.https.onCall((data, context) => {
                     if (geolib.getDistance(geoPointToGeolib(user.get(currentLocation)), geoPointToGeolib(carer.get("currentLocation"))) < radius) {
                         var message = {
                             data: {
-                                type: 'carerRequest',
+                                type: type,
                                 senderId: user.id,
-                                senderName: user.get('firstName')
+                                senderName: user.get('firstName'),
+                                senderLocation: user.get('currentLocation'),
                             },
                             token: carer.get('firebaseToken')
                         };
                         admin.messaging().send(message)
                     }
                 });
-                return "Waiting for carer";
+                return returnSuccess;
             } else {
-                return "No carers found";
+                return returnFailure;
             }
         }).catch();
-});
+}
 
 function geoPointToGeolib(geopoint) {
     return {
@@ -96,7 +104,7 @@ exports.chatNotification = functions.firestore
                 return null;
             })
             .catch();
-    })
+    });
 	
 exports.addContact = functions.https.onCall((data, context) => {
 	var db = admin.firestore();
@@ -114,4 +122,4 @@ exports.addContact = functions.https.onCall((data, context) => {
             return 'null';
         })
         .catch();
-})
+});
