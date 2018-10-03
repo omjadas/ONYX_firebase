@@ -73,6 +73,10 @@ function geoPointToGeolib(geopoint) {
     }
 }
 
+exports.acceptCarerRequest = functions.https.onCall((data, context) => {
+
+});
+
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate((snap, context) => {
