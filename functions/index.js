@@ -106,8 +106,8 @@ exports.acceptCarerRequest = functions.https.onCall((data, context) => {
                     },
                     token: receiver.get('firebaseToken')
                 }
-                db.collection('users').doc(data.receiver).set({connectedUser: context.auth.uid});
-                db.collection('users').doc(context.auth.uid).set({connectedUser: data.receiver});
+                db.collection('users').doc(data.receiver).update({connectedUser: context.auth.uid});
+                db.collection('users').doc(context.auth.uid).update({connectedUser: data.receiver});
                 admin.messaging().send(fcm);
                 return "Connected";
             }
