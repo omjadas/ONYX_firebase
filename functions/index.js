@@ -95,22 +95,24 @@ function geoPointToGeolib(geopoint) {
 
 exports.acceptCarerRequest = functions.https.onCall((data, context) => {
     var db = admin.firestore();
-
-    return db.collection('users').doc(data.sender).get()
-        .then(user => {
-            if (!user.get('isConnected')) {
+    
+    return db.collection('users').doc(data.receiver).get()
+        .then(receiver => {
+            if (!receiver.get('connectedUser')) {
                 var fcm = {
                     data: {
                         type: "accept",
                         uid: context.auth.uid
                     },
-                    token: user.get('firebaseToken')
+                    token: receiver.get('firebaseToken')
                 }
+                db.collection('users').doc(data.receiver).set({connectedUser: context.auth.uid});
+                db.collection('users').doc(context.auth.uid).set({connectedUser: data.receiver});
                 admin.messaging().send(fcm);
                 return "Connected";
             }
             return "You snooze, you loose!";
-        });
+        })
 });
 
 exports.chatNotification = functions.firestore
