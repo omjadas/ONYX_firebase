@@ -114,6 +114,26 @@ function geoPointToGeolib(geopoint) {
     }
 }
 
+exports.acceptCarerRequest = functions.https.onCall((data, context) => {
+    var db = admin.firestore();
+
+    return db.collection('users').doc(data.sender).get()
+        .then(user => {
+            if (!user.get('isConnected')) {
+                var fcm = {
+                    data: {
+                        type: "accept",
+                        uid: context.auth.uid
+                    },
+                    token: user.get('firebaseToken')
+                }
+                admin.messaging().send(fcm);
+                return "Connected";
+            }
+            return "You snooze, you loose!";
+        });
+});
+
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate((snap, context) => {
@@ -149,7 +169,7 @@ exports.chatNotification = functions.firestore
             })
             .catch();
     });
-	
+
 exports.addContact = functions.https.onCall((data, context) => {
     var db = admin.firestore();
     var userRefs = db.collection('users');
