@@ -14,6 +14,47 @@ exports.sendSOS = functions.https.onCall((data, context) => {
     return sendFCMMessage(1000, 'SOS', 'Help is on the way', 'No carers found', data, context);
 });
 
+exports.sendAnnotation = functions.https.onCall((data, context) => {
+    return sendFCMGeoData(1000, 'annotation', 'Success', 'Annotation not sent', data, context);
+    //response.send("Test");
+});
+
+function sendFCMGeoData(radius, type, returnSuccess, returnFailure, data, context) {
+    var db = admin.firestore();
+    var user = db.collection('users').doc(context.auth.uid).get()
+        .then(user => {
+            console.log(data.points);
+            if (!user.exists) {
+                console.log('No such document!');
+                return null;
+            } else {
+                console.log('Document data:', user.data());
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    var connectedUser = user.then(user => {
+        return db.collection('users').doc(user.get('connectedUser')).get();
+    });
+
+    return Promise.all([user, connectedUser])
+        .then(([user, connectedUser]) => {
+            var fcm = {
+                data: {
+                    type: "annotation",
+                    points: data.points
+                },
+                token: connectedUser.get('firebaseToken')
+            }
+            admin.messaging().send(fcm);
+            return null;
+        }).catch();
+}
+
+
 function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, context) {
     var db = admin.firestore();
     var user = db.collection('users').doc(context.auth.uid).get()
