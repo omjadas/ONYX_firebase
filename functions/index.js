@@ -14,6 +14,26 @@ exports.sendSOS = functions.https.onCall((data, context) => {
     return sendFCMMessage(1000, 'SOS', 'Help is on the way', 'No carers found', data, context);
 });
 
+exports.sendAnnotation = functions.https.onCall((data, context) => {
+    var db = admin.firestore();
+
+    return db.collection('users').doc(context.auth.uid).get()
+        .then(user => {
+            return db.collection('users').doc(user.get('connectedUser')).get();
+        })
+        .then(connectedUser => {
+            var fcm = {
+                data: {
+                    type: "annotation",
+                    points: data.points
+                },
+                token: connectedUser.get('firebaseToken')
+            }
+            admin.messaging().send(fcm);
+            return null;
+        });
+});
+
 function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, context) {
     var db = admin.firestore();
     var user = db.collection('users').doc(context.auth.uid).get()
