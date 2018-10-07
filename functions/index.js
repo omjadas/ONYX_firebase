@@ -305,7 +305,9 @@ exports.disconnect = functions.https.onCall((data, context) => {
  * @param {functions.EventContext} context The context in which the event
  *     occurred.
  * 
- * @returns {Promise} Promise object that represents null.
+ * @returns {Promise} Promise object that represents either 'Notification sent'
+ *     (if the FCM message was successfully sent) or 'Notification not sent' (if
+ *     sending the FCM message failed).
  */
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
