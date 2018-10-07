@@ -8,7 +8,7 @@ admin.initializeApp();
  * Requests a carer.
  * 
  * Sends a Firebase Cloud Message of type 'carerRequest' to carers within a 500m
- * radius of the user. 
+ * radius of the user, using {@link sendFCMMessage}. 
  * 
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
@@ -25,7 +25,7 @@ exports.requestCarer = functions.https.onCall((data, context) => {
  * Sends an SOS to nearby carers.
  * 
  * Sends a Firebase Cloud Message of type 'SOS' to carers within a 1000m of the
- * user. 
+ * user, using {@link sendFCMMessage}. 
  * 
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
