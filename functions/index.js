@@ -39,10 +39,10 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
     var user = db.collection('users').doc(context.auth.uid).get()
         .then(user => {
             if (!user.exists) {
-                console.log('No such document!');
+                console.log('User not Found!');
                 return null;
             } else {
-                console.log('Document data:', user.data());
+                console.log('User Found');
                 return user;
             }
         })
@@ -50,16 +50,17 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
             console.log('Error getting document', err);
         });
 
-    var carers = user.then(user => {
-        var currentLocation = geoPointToGeolib(user.data().currentLocation);
-        var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
-        var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
-        return db.collection('users')
-            .where('isCarer', '==', true)
-            .where('isOnline', '==', true)
-            .where('currentLocation', '>=', new admin.firestore.GeoPoint(small.latitude, small.longitude))
-            .where('currentLocation', '<=', new admin.firestore.GeoPoint(large.latitude, large.longitude)).get();
-    });
+    var carers = user
+        .then(user => {
+            var currentLocation = geoPointToGeolib(user.data().currentLocation);
+            var small = geolib.computeDestinationPoint(currentLocation, radius, 180);
+            var large = geolib.computeDestinationPoint(currentLocation, radius, 0);
+            return db.collection('users')
+                .where('isCarer', '==', true)
+                .where('isOnline', '==', true)
+                .where('currentLocation', '>=', new admin.firestore.GeoPoint(small.latitude, small.longitude))
+                .where('currentLocation', '<=', new admin.firestore.GeoPoint(large.latitude, large.longitude)).get();
+        });
 
     return Promise.all([user, carers])
         .then(([user, carers]) => {
@@ -83,7 +84,8 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
             } else {
                 return returnFailure;
             }
-        }).catch();
+        })
+        .catch();
 }
 
 function geoPointToGeolib(geopoint) {
@@ -95,8 +97,22 @@ function geoPointToGeolib(geopoint) {
 
 exports.acceptCarerRequest = functions.https.onCall((data, context) => {
     var db = admin.firestore();
-    
-    return db.collection('users').doc(data.receiver).get()
+
+    var receiver = db.collection('users').doc(data.receiver).get()
+        .then(receiver => {
+            if (!receiver.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return receiver;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    return receiver
         .then(receiver => {
             if (!receiver.get('connectedUser')) {
                 var fcm = {
@@ -106,13 +122,42 @@ exports.acceptCarerRequest = functions.https.onCall((data, context) => {
                     },
                     token: receiver.get('firebaseToken')
                 }
-                db.collection('users').doc(data.receiver).update({connectedUser: context.auth.uid});
-                db.collection('users').doc(context.auth.uid).update({connectedUser: data.receiver});
+                db.collection('users').doc(data.receiver).update({ connectedUser: context.auth.uid });
+                db.collection('users').doc(context.auth.uid).update({ connectedUser: data.receiver });
                 admin.messaging().send(fcm);
-                return "Connected";
+                return 'Connected';
             }
-            return "You snooze, you loose!";
+            return 'You snooze, you loose!';
         })
+        .catch();
+});
+
+exports.disconnect = functions.https.onCall((data, context) => {
+    var db = admin.firestore()
+
+    var user = db.collection('users').doc(context.auth.uid).get()
+        .then(user => {
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    return user
+        .then(user => {
+            if (user.get('connectedUser') !== null) {
+                db.collection('users').doc(user.get('connectedUser')).update({ connectedUser: null });
+                db.collection('users').doc(context.auth.uid).update({ connectedUser: null });
+                return 'Disconnected'
+            }
+            return 'User not connected'
+        });
 });
 
 exports.chatNotification = functions.firestore
@@ -124,10 +169,10 @@ exports.chatNotification = functions.firestore
         return db.collection('users').doc(message.receiverUid).get()
             .then(receiver => {
                 if (!receiver.exists) {
-                    console.log('No such document!');
+                    console.log('User not Found');
                     return null;
                 } else {
-                    console.log('Document data:', receiver.data());
+                    console.log('User Found');
                     return receiver;
                 }
             })
