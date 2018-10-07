@@ -164,6 +164,8 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
                             token: carer.get('firebaseToken')
                         };
                         return admin.messaging().send(message);
+                    } else {
+                        return returnFailure;
                     }
                 });
             }
