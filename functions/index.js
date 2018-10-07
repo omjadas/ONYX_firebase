@@ -49,14 +49,40 @@ exports.sendSOS = functions.https.onCall((data, context) => {
  *     annotation on the receiver's device.
  * @param {functions.https.CallableContext} context User auth information.
  * 
- * @returns {Promise} Promise object that represents null.
+ * @returns {Promise} Promise object that represents either 'Annotations
+ *     successfully sent' (if the annotations were sent) or 'Annotations failed
+ *     to send' (if the annotations were not sent).
  */
 exports.sendAnnotation = functions.https.onCall((data, context) => {
     var db = admin.firestore();
 
     return db.collection('users').doc(context.auth.uid).get()
         .then(user => {
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        })
+        .then(user => {
             return db.collection('users').doc(user.get('connectedUser')).get();
+        })
+        .then(connectedUser => {
+            if (!connectedUser.exists) {
+                console.log('connectedUser not Found!');
+                return null;
+            } else {
+                console.log('connectedUser Found');
+                return connectedUser;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
         })
         .then(connectedUser => {
             var fcm = {
@@ -66,10 +92,17 @@ exports.sendAnnotation = functions.https.onCall((data, context) => {
                 },
                 token: connectedUser.get('firebaseToken')
             }
-            admin.messaging().send(fcm);
-            return null;
+            return admin.messaging().send(fcm);
         })
-        .catch();
+        .then(response => {
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return 'Annotations successfully sent';
+        })
+        .catch(error => {
+            console.log('Error sending message:', error);
+            return 'Annotations failed to send';
+        });
 });
 
 /**
@@ -130,15 +163,24 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
                             },
                             token: carer.get('firebaseToken')
                         };
-                        admin.messaging().send(message);
+                        return admin.messaging().send(message);
                     }
                 });
-                return returnSuccess;
-            } else {
+            }
+            return returnFailure;
+        })
+        .then(response => {
+            if (response === returnFailure) {
                 return returnFailure;
             }
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return returnSuccess;
         })
-        .catch();
+        .catch(error => {
+            console.log('Error sending message:', error);
+            return returnFailure;
+        });
 }
 
 /**
@@ -293,10 +335,17 @@ exports.chatNotification = functions.firestore
                     },
                     token: receiver.get('firebaseToken')
                 }
-                admin.messaging().send(fcm);
-                return null;
+                return admin.messaging().send(fcm);
             })
-            .catch();
+            .then(response => {
+                // Response is a message ID string.
+                console.log('Successfully sent message:', response);
+                return 'Notification sent';
+            })
+            .catch(error => {
+                console.log('Error sending message:', error);
+                return 'Notification not sent';
+            });
     });
 
 /**
