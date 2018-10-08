@@ -4,6 +4,17 @@ const geolib = require('geolib');
 admin.initializeApp();
 
 
+// Function exports
+exports.requestCarer = functions.https.onCall(requestCarer);
+exports.sendSOS = functions.https.onCall(sendSOS);
+exports.sendAnnotation = functions.https.onCall(sendAnnotation);
+exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
+exports.disconnect = functions.https.onCall(disconnect);
+exports.chatNotification = functions.firestore
+    .document('chat_rooms/{chatId}/message/{messageId}')
+    .onCreate(chatNotification);
+exports.addContact = functions.https.onCall(addContact);
+
 /**
  * Requests a carer.
  * 
@@ -13,13 +24,13 @@ admin.initializeApp();
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
  * 
- * @returns {Promise} Promise object that represents either 'Waiting for carer'
- *     (if carers were found )or 'No carers found' (if no carers
- *     were found).
+ * @returns {Promise} Promise object that represents either 'Waiting for carer
+ *     response' (if carers were found )or 'No carers found' (if no carers were
+ *     found).
  */
-exports.requestCarer = functions.https.onCall((data, context) => {
+function requestCarer(data, context) {
     return sendFCMMessage(500, 'carerRequest', 'Waiting for carer', 'No carers found', data, context);
-});
+}
 
 /**
  * Sends an SOS to nearby carers.
@@ -34,9 +45,9 @@ exports.requestCarer = functions.https.onCall((data, context) => {
  *     (if the SOS was successfully sent) or 'No carers found' (if there was no
  *     one to send the SOS to nearby).
  */
-exports.sendSOS = functions.https.onCall((data, context) => {
+function sendSOS(data, context) {
     return sendFCMMessage(1000, 'SOS', 'Help is on the way', 'No carers found', data, context);
-});
+}
 
 /**
  * Sends an annotation to the connected user.
@@ -53,7 +64,7 @@ exports.sendSOS = functions.https.onCall((data, context) => {
  *     successfully sent' (if the annotations were sent) or 'Annotations failed
  *     to send' (if the annotations were not sent).
  */
-exports.sendAnnotation = functions.https.onCall((data, context) => {
+function sendAnnotation(data, context) {
     var db = admin.firestore();
 
     return db.collection('users').doc(context.auth.uid).get()
@@ -103,7 +114,7 @@ exports.sendAnnotation = functions.https.onCall((data, context) => {
             console.log('Error sending message:', error);
             return 'Annotations failed to send';
         });
-});
+}
 
 /**
  * Sends an FCM message to carers within a certain radius.
@@ -150,6 +161,7 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
 
     return Promise.all([user, carers])
         .then(([user, carers]) => {
+            var returnValue = null;
             if (carers.size) {
                 carers.forEach(carer => {
                     if (geolib.getDistance(geoPointToGeolib(user.get('currentLocation')), geoPointToGeolib(carer.get('currentLocation'))) < radius) {
@@ -163,24 +175,16 @@ function sendFCMMessage(radius, type, returnSuccess, returnFailure, data, contex
                             },
                             token: carer.get('firebaseToken')
                         };
-                        return admin.messaging().send(message);
+                        admin.messaging().send(message);
+                        returnValue = returnSuccess
                     } else {
-                        return returnFailure;
+                        if (returnValue !== returnSuccess) {
+                            returnValue = returnFailure;
+                        }
                     }
                 });
+                return returnValue;
             }
-            return returnFailure;
-        })
-        .then(response => {
-            if (response === returnFailure) {
-                return returnFailure;
-            }
-            // Response is a message ID string.
-            console.log('Successfully sent message:', response);
-            return returnSuccess;
-        })
-        .catch(error => {
-            console.log('Error sending message:', error);
             return returnFailure;
         });
 }
@@ -218,7 +222,7 @@ function geoPointToGeolib(geopoint) {
  *     two users were successfully connected) or 'You snooze, you loose!' (if
  *     the user who requested a carer was already connected with someone else).
  */
-exports.acceptCarerRequest = functions.https.onCall((data, context) => {
+function acceptCarerRequest(data, context) {
     var db = admin.firestore();
 
     var receiver = db.collection('users').doc(data.receiver).get()
@@ -253,7 +257,7 @@ exports.acceptCarerRequest = functions.https.onCall((data, context) => {
             return 'You snooze, you loose!';
         })
         .catch();
-});
+}
 
 /**
  * Disconnects two users.
@@ -267,7 +271,7 @@ exports.acceptCarerRequest = functions.https.onCall((data, context) => {
  *     users were disconnected successfully) or 'User not connected' (if the
  *     calling user was not connected to start with). 
  */
-exports.disconnect = functions.https.onCall((data, context) => {
+function disconnect(data, context) {
     var db = admin.firestore()
 
     var user = db.collection('users').doc(context.auth.uid).get()
@@ -293,7 +297,7 @@ exports.disconnect = functions.https.onCall((data, context) => {
             }
             return 'User not connected'
         });
-});
+}
 
 /**
  * Sends a notification if a user is sent a chat message.
@@ -309,48 +313,46 @@ exports.disconnect = functions.https.onCall((data, context) => {
  *     (if the FCM message was successfully sent) or 'Notification not sent' (if
  *     sending the FCM message failed).
  */
-exports.chatNotification = functions.firestore
-    .document('chat_rooms/{chatId}/message/{messageId}')
-    .onCreate((snap, context) => {
-        const message = snap.data();
-        var db = admin.firestore();
+function chatNotification(snap, context) {
+    const message = snap.data();
+    var db = admin.firestore();
 
-        return db.collection('users').doc(message.receiverUid).get()
-            .then(receiver => {
-                if (!receiver.exists) {
-                    console.log('User not Found');
-                    return null;
-                } else {
-                    console.log('User Found');
-                    return receiver;
-                }
-            })
-            .catch(err => {
-                console.log('Error getting document', err);
-            })
-            .then(receiver => {
-                var fcm = {
-                    data: {
-                        type: 'chat',
-                        title: message.sender,
-                        text: message.message,
-                        username: message.sender,
-                        uid: message.senderUid
-                    },
-                    token: receiver.get('firebaseToken')
-                }
-                return admin.messaging().send(fcm);
-            })
-            .then(response => {
-                // Response is a message ID string.
-                console.log('Successfully sent message:', response);
-                return 'Notification sent';
-            })
-            .catch(error => {
-                console.log('Error sending message:', error);
-                return 'Notification not sent';
-            });
-    });
+    return db.collection('users').doc(message.receiverUid).get()
+        .then(receiver => {
+            if (!receiver.exists) {
+                console.log('User not Found');
+                return null;
+            } else {
+                console.log('User Found');
+                return receiver;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        })
+        .then(receiver => {
+            var fcm = {
+                data: {
+                    type: 'chat',
+                    title: message.sender,
+                    text: message.message,
+                    username: message.sender,
+                    uid: message.senderUid
+                },
+                token: receiver.get('firebaseToken')
+            }
+            return admin.messaging().send(fcm);
+        })
+        .then(response => {
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return 'Notification sent';
+        })
+        .catch(error => {
+            console.log('Error sending message:', error);
+            return 'Notification not sent';
+        });
+}
 
 /**
  * Adds a user as a contact.
@@ -367,7 +369,7 @@ exports.chatNotification = functions.firestore
  *     '{data.email} already in contacts' (if the users werw already in each
  *     other's contacts).
  */
-exports.addContact = functions.https.onCall((data, context) => {
+function addContact(data, context) {
     var db = admin.firestore();
     var userRefs = db.collection('users');
 
@@ -401,4 +403,4 @@ exports.addContact = functions.https.onCall((data, context) => {
             return data.email + ' already in contacts';
         })
         .catch();
-});
+}
