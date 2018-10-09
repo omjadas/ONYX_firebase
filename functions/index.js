@@ -24,12 +24,12 @@ exports.addContact = functions.https.onCall(addContact);
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
  * 
- * @returns {Promise} Promise object that represents either 'Waiting for carer
- *     response' (if carers were found )or 'No carers found' (if no carers were
- *     found).
+ * @returns {Promise} Promise object that represents either 'Waiting for
+ *     response from carers' (if carers were found )or 'No carers found' (if no
+ *     carers were found).
  */
 function requestCarer(data, context) {
-    return sendFCMMessage(500, 'carerRequest', 'Waiting for carer', 'No carers found', data, context);
+    return sendFCMMessage(500, 'carerRequest', 'Waiting for response from carers', 'No carers found', data, context);
 }
 
 /**
