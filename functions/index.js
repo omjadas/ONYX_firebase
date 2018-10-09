@@ -15,7 +15,7 @@ exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate(chatNotification);
 exports.locationUpdate = functions.firestore
-    .document('users/{userId}/currentLocation')
+    .document('users/{userId}')
     .onUpdate(locationUpdate);
 
 /**
@@ -425,7 +425,7 @@ function chatNotification(snap, context) {
  *     sending the FCM message failed).
  */
 function locationUpdate(change, context) {
-    db = admin.firestore()
+    var db = admin.firestore();
     var user = db.collection('users').doc(context.params.userId).get()
         .then(user => {
             if (!user.exists) {
