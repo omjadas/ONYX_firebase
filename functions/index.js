@@ -470,7 +470,6 @@ function locationUpdate(change, context) {
                     },
                     token: connectedUser.get('firebaseToken')
                 }
-                console.log(fcm);
                 return admin.messaging().send(fcm);
             }
         })
