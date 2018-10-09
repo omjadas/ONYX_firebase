@@ -465,6 +465,7 @@ function locationUpdate(change, context) {
                 var fcm = {
                     data: {
                         type: 'locationUpdate',
+                        name: user.get('firstName') + ' ' + user.get('lastName'),
                         latitude: user.get('currentLocation').latitude.toString(),
                         longitude: user.get('currentLocation').longitude.toString(),
                     },
