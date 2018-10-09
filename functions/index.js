@@ -442,14 +442,14 @@ function locationUpdate(change, context) {
 
     var connectedUser = user
         .then(user => {
-            return db.collection('users').doc(user.get(connectedUser)).get();
+            return db.collection('users').doc(user.get('connectedUser')).get();
         })
         .then(connectedUser => {
             if (!connectedUser.exists) {
-                console.log('User not Found!');
+                console.log('Connected User not Found!');
                 return null;
             } else {
-                console.log('User Found');
+                console.log('Connected User Found');
                 return connectedUser;
             }
         })
@@ -468,10 +468,10 @@ function locationUpdate(change, context) {
                         latitude: user.get('currentLocation').latitude.toString(),
                         longitude: user.get('currentLocation').longitude.toString(),
                     },
-                    token: db.collection('users').doc(connectedUser.uid).get().get('firebaseToken')
+                    token: connectedUser.get('firebaseToken')
                 }
                 console.log(fcm);
-                return admin.messaging.send(fcm);
+                return admin.messaging().send(fcm);
             }
         })
         .then(response => {
