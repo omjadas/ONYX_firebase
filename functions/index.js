@@ -291,7 +291,10 @@ function disconnect(data, context) {
             console.log('Error getting document', err);
         });
 
-    var connectedUser = db.collection('users').doc(user.get('connectedUser')).get()
+    var connectedUser = user
+        .then(user => {
+            return db.collection('users').doc(user.get('connectedUser')).get()
+        })
         .then(connectedUser => {
             if (!connectedUser.exists) {
                 console.log('Connected User not Found!');
