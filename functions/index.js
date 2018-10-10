@@ -320,7 +320,7 @@ function disconnect(data, context) {
                     },
                     token: connectedUser.get('firebaseToken')
                 }
-                return admin.messaging.send(fcm);
+                return admin.messaging().send(fcm);
             }
             return 'User not connected'
         })
