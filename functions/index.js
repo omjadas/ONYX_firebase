@@ -271,7 +271,7 @@ function acceptCarerRequest(data, context) {
  * @param {functions.https.CallableContext} context User auth information.
  * 
  * @returns {Promise} Promise that represents either 'Disconnected' (if the two
- *     users were disconnected successfully) or 'User not connected' (if the
+ *     users were disconnected successfully), 'User not connected' (if the
  *     calling user was not connected to start with). 
  */
 function disconnect(data, context) {
@@ -291,14 +291,46 @@ function disconnect(data, context) {
             console.log('Error getting document', err);
         });
 
-    return user
-        .then(user => {
+    var connectedUser = db.collection('users').doc(user.get('connectedUser')).get()
+        .then(connectedUser => {
+            if (!connectedUser.exists) {
+                console.log('Connected User not Found!');
+                return null;
+            } else {
+                console.log('Connected User Found');
+                return connectedUser;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    return Promise.all([user, connectedUser])
+        .then(([user, connectedUser]) => {
             if (user.get('connectedUser') !== null) {
                 db.collection('users').doc(user.get('connectedUser')).update({ connectedUser: null });
                 db.collection('users').doc(context.auth.uid).update({ connectedUser: null });
-                return 'Disconnected'
+                var fcm = {
+                    data: {
+                        type: 'disconnect',
+                        name: user.get('firstName') + ' ' + user.get('lastName')
+                    },
+                    token: connectedUser.get('firebaseToken')
+                }
+                return admin.messaging.send(fcm);
             }
             return 'User not connected'
+        })
+        .then(response => {
+            if (response === 'User not connected') {
+                return response;
+            }
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return 'Disconnected';
+        })
+        .catch(error => {
+            console.log('Error sending message:', error);
         });
 }
 
