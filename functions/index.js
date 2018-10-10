@@ -268,7 +268,7 @@ function acceptCarerRequest(data, context) {
  * @param {functions.https.CallableContext} context User auth information.
  * 
  * @returns {Promise} Promise that represents either 'Disconnected' (if the two
- *     users were disconnected successfully) or 'User not connected' (if the
+ *     users were disconnected successfully), 'User not connected' (if the
  *     calling user was not connected to start with). 
  */
 function disconnect(data, context) {
@@ -328,7 +328,6 @@ function disconnect(data, context) {
         })
         .catch(error => {
             console.log('Error sending message:', error);
-            return 'Unable to Disconnect';
         });
 }
 
