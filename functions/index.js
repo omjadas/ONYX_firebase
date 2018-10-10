@@ -10,10 +10,13 @@ exports.sendSOS = functions.https.onCall(sendSOS);
 exports.sendAnnotation = functions.https.onCall(sendAnnotation);
 exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
 exports.disconnect = functions.https.onCall(disconnect);
+exports.addContact = functions.https.onCall(addContact);
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate(chatNotification);
-exports.addContact = functions.https.onCall(addContact);
+exports.locationUpdate = functions.firestore
+    .document('users/{userId}')
+    .onUpdate(locationUpdate);
 
 /**
  * Requests a carer.
@@ -24,12 +27,12 @@ exports.addContact = functions.https.onCall(addContact);
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
  * 
- * @returns {Promise} Promise object that represents either 'Waiting for carer
- *     response' (if carers were found )or 'No carers found' (if no carers were
- *     found).
+ * @returns {Promise} Promise object that represents either 'Waiting for
+ *     response from carers' (if carers were found )or 'No carers found' (if no
+ *     carers were found).
  */
 function requestCarer(data, context) {
-    return sendFCMMessage(500, 'carerRequest', 'Waiting for carer', 'No carers found', data, context);
+    return sendFCMMessage(500, 'carerRequest', 'Waiting for response from carers', 'No carers found', data, context);
 }
 
 /**
@@ -300,12 +303,64 @@ function disconnect(data, context) {
 }
 
 /**
+ * Adds a user as a contact.
+ * 
+ * Adds two user's to each other's contacts collection.
+ * 
+ * @param {Object} data Data passed to the cloud function.
+ * @param {string} data.email The email address of the user to be added as a
+ *     contact.
+ * @param {functions.https.CallableContext} context User auth information.
+ * 
+ * @returns {Promise} Promise object that represents either '{data.email} added
+ *     to contacts' (if the users were added to each other's contacts) or
+ *     '{data.email} already in contacts' (if the users werw already in each
+ *     other's contacts).
+ */
+function addContact(data, context) {
+    var db = admin.firestore();
+    var userRefs = db.collection('users');
+
+    var user = userRefs.where('email', '==', data.email).get()
+        .then(users => {
+            var returnUser = null;
+            users.forEach(user => {
+                returnUser = user;
+            });
+            return returnUser;
+        })
+
+    var alreadyAdded = user
+        .then(user => {
+            return db.collection('users').doc(context.auth.uid).collection('contacts').doc(user.id).get()
+        })
+        .then((docSnapshot) => {
+            if (docSnapshot.exists) {
+                return true;
+            }
+            return false;
+        });
+
+    return Promise.all([user, alreadyAdded])
+        .then(([user, alreadyAdded]) => {
+            if (!alreadyAdded) {
+                userRefs.doc(context.auth.uid).collection('contacts').doc(user.id).set({ userRef: user.id });
+                userRefs.doc(user.id).collection('contacts').doc(context.auth.uid).set({ userRef: context.auth.uid });
+                return data.email + ' added to contacts';
+            }
+            return data.email + ' already in contacts';
+        })
+        .catch();
+}
+
+/**
  * Sends a notification if a user is sent a chat message.
  * 
  * Sends a Firebase Cloud Message to the receiver of a chat message when a new
  * entry is created in the chat_rooms collection.
  * 
- * @param {Object} snap Cloud Firestore document snapshot.
+ * @param {functions.firestore.DocumentSnapshot} snap Cloud Firestore document
+ *     snapshot.
  * @param {functions.EventContext} context The context in which the event
  *     occurred.
  * 
@@ -355,52 +410,77 @@ function chatNotification(snap, context) {
 }
 
 /**
- * Adds a user as a contact.
+ * Updates the user if the user they are connected to has moved.
  * 
- * Adds two user's to each other's contacts collection.
+ * Sends a Firebase Cloud Message to a user each time the location of their
+ * connected user's location changes.
  * 
- * @param {Object} data Data passed to the cloud function.
- * @param {string} data.email The email address of the user to be added as a
- *     contact.
- * @param {functions.https.CallableContext} context User auth information.
+ * @param {functions.Change} change Contains two DocumentSnapshots, one
+ *     representing the state before the event, and one after.
+ * @param {functions.EventContext} context The context in which the event
+ *     occurred.
  * 
- * @returns {Promise} Promise object that represents either '{data.email} added
- *     to contacts' (if the users were added to each other's contacts) or
- *     '{data.email} already in contacts' (if the users werw already in each
- *     other's contacts).
+ * @returns {Promise} Promise object that represents either 'Notification sent'
+ *     (if the FCM message was successfully sent) or 'Notification not sent' (if
+ *     sending the FCM message failed).
  */
-function addContact(data, context) {
+function locationUpdate(change, context) {
     var db = admin.firestore();
-    var userRefs = db.collection('users');
-
-    var user = userRefs.where('email', '==', data.email).get()
-        .then(users => {
-            var returnUser = null;
-            users.forEach(user => {
-                returnUser = user;
-            });
-            return returnUser;
-        })
-
-    var alreadyAdded = user
+    var user = db.collection('users').doc(context.params.userId).get()
         .then(user => {
-            return db.collection('users').doc(context.auth.uid).collection('contacts').doc(user.id).get()
-        })
-        .then((docSnapshot) => {
-            if (docSnapshot.exists) {
-                return true;
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
             }
-            return false;
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
         });
 
-    return Promise.all([user, alreadyAdded])
-        .then(([user, alreadyAdded]) => {
-            if (!alreadyAdded) {
-                userRefs.doc(context.auth.uid).collection('contacts').doc(user.id).set({ userRef: user.id });
-                userRefs.doc(user.id).collection('contacts').doc(context.auth.uid).set({ userRef: context.auth.uid });
-                return data.email + ' added to contacts';
-            }
-            return data.email + ' already in contacts';
+    var connectedUser = user
+        .then(user => {
+            return db.collection('users').doc(user.get('connectedUser')).get();
         })
-        .catch();
+        .then(connectedUser => {
+            if (!connectedUser.exists) {
+                console.log('Connected User not Found!');
+                return null;
+            } else {
+                console.log('Connected User Found');
+                return connectedUser;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    return Promise.all([user, connectedUser])
+        .then(([user, connectedUser]) => {
+            if (connectedUser === null) {
+                return null;
+            } else {
+                var fcm = {
+                    data: {
+                        type: 'locationUpdate',
+                        name: user.get('firstName') + ' ' + user.get('lastName'),
+                        latitude: user.get('currentLocation').latitude.toString(),
+                        longitude: user.get('currentLocation').longitude.toString(),
+                    },
+                    token: connectedUser.get('firebaseToken')
+                }
+                return admin.messaging().send(fcm);
+            }
+        })
+        .then(response => {
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return 'Notification sent';
+        })
+        .catch(error => {
+            console.log('Error sending message:', error);
+            return 'Notification not sent';
+        });
 }
