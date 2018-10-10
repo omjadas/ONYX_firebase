@@ -228,6 +228,20 @@ function geoPointToGeolib(geopoint) {
 function acceptCarerRequest(data, context) {
     var db = admin.firestore();
 
+    var user = db.collection('users').doc(context.auth.uid).get()
+    .then(user => {
+        if (!user.exists) {
+            console.log('User not Found!');
+            return null;
+        } else {
+            console.log('User Found');
+            return user;
+        }
+    })
+    .catch(err => {
+        console.log('Error getting document', err);
+    });
+
     var receiver = db.collection('users').doc(data.receiver).get()
         .then(receiver => {
             if (!receiver.exists) {
@@ -242,13 +256,13 @@ function acceptCarerRequest(data, context) {
             console.log('Error getting document', err);
         });
 
-    return receiver
-        .then(receiver => {
+    return Promise.all([user, receiver])
+        .then(([user, receiver]) => {
             if (!receiver.get('connectedUser')) {
                 var fcm = {
                     data: {
-                        type: 'accept',
-                        uid: context.auth.uid
+                        type: 'connect',
+                        name: user.get('firstName') + ' ' + user.get('lastName')
                     },
                     token: receiver.get('firebaseToken')
                 }
