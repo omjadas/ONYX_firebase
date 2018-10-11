@@ -530,6 +530,9 @@ function locationUpdate(change, context) {
             }
         })
         .then(response => {
+            if (response === null) {
+                return null;
+            }
             // Response is a message ID string.
             console.log('Successfully sent message:', response);
             return 'Notification sent';
