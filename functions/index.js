@@ -491,9 +491,15 @@ function locationUpdate(change, context) {
 
     var connectedUser = user
         .then(user => {
+            if (user.get('connectedUser') === null) {
+                return null;
+            }
             return db.collection('users').doc(user.get('connectedUser')).get();
         })
         .then(connectedUser => {
+            if (connectedUser === null) {
+                return connectedUser;
+            }
             if (!connectedUser.exists) {
                 console.log('Connected User not Found!');
                 return null;
