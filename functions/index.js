@@ -362,7 +362,8 @@ function disconnect(data, context) {
  * @param {functions.https.CallableContext} context User auth information.
  * 
  * @returns {Promise} Promise object that represents either '{data.email} added
- *     to contacts' (if the users were added to each other's contacts) or
+ *     to contacts' (if the users were added to each other's contacts),
+ *     '{data.email} is not on Onyx' (if the user does not have an account), or
  *     '{data.email} already in contacts' (if the users werw already in each
  *     other's contacts).
  */
@@ -381,9 +382,15 @@ function addContact(data, context) {
 
     var alreadyAdded = user
         .then(user => {
+            if (user === null) {
+                return user;
+            }
             return db.collection('users').doc(context.auth.uid).collection('contacts').doc(user.id).get()
         })
         .then((docSnapshot) => {
+            if (docSnapshot === null) {
+                return docSnapshot;
+            }
             if (docSnapshot.exists) {
                 return true;
             }
@@ -392,6 +399,9 @@ function addContact(data, context) {
 
     return Promise.all([user, alreadyAdded])
         .then(([user, alreadyAdded]) => {
+            if (alreadyAdded === null) {
+                return data.email + ' is not on Onyx';
+            }
             if (!alreadyAdded) {
                 userRefs.doc(context.auth.uid).collection('contacts').doc(user.id).set({ userRef: user.id });
                 userRefs.doc(user.id).collection('contacts').doc(context.auth.uid).set({ userRef: context.auth.uid });
