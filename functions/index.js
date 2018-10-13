@@ -61,9 +61,13 @@ function sendSOS(data, context) {
  * 
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
+ * 
+ * @returns {Promise} Promise object that represents either 'Carers have been
+ *     notified' (if the message was successfully sent) or 'No carers found' (if
+ *     there was no one to send the message to nearby).
  */
 function sendOK(data, context) {
-    return sendFCMMessage(2000, 'OK', 'Carers have been notified', 'Carers have been notified', data, context);
+    return sendFCMMessage(2000, 'OK', 'Carers have been notified', 'No carers found', data, context);
 }
 
 /**
