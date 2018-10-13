@@ -247,18 +247,18 @@ function acceptCarerRequest(data, context) {
     var db = admin.firestore();
 
     var user = db.collection('users').doc(context.auth.uid).get()
-    .then(user => {
-        if (!user.exists) {
-            console.log('User not Found!');
-            return null;
-        } else {
-            console.log('User Found');
-            return user;
-        }
-    })
-    .catch(err => {
-        console.log('Error getting document', err);
-    });
+        .then(user => {
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
 
     var receiver = db.collection('users').doc(data.receiver).get()
         .then(receiver => {
