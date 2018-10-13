@@ -2,24 +2,24 @@
 
 Install firebase tools using npm as admin
 
-``` bash
+```bash
 npm i -g firebase-tools
 ```
 
 Then run
 
-``` bash
+```bash
 firebase login
 ```
 
 Finally navigate to functions directory and run
 
-``` bash
+```bash
 npm i
 ```
 
 To deploy any changes made to Firebase, run
 
-``` bash
+```bash
 firebase deploy
 ```
