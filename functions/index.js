@@ -7,6 +7,7 @@ admin.initializeApp();
 // Function exports
 exports.requestCarer = functions.https.onCall(requestCarer);
 exports.sendSOS = functions.https.onCall(sendSOS);
+exports.sendOK = functions.https.onCall(sendOK);
 exports.sendAnnotation = functions.https.onCall(sendAnnotation);
 exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
 exports.disconnect = functions.https.onCall(disconnect);
@@ -38,8 +39,8 @@ function requestCarer(data, context) {
 /**
  * Sends an SOS to nearby carers.
  * 
- * Sends a Firebase Cloud Message of type 'SOS' to carers within a 1000m of the
- * user, using {@link sendFCMMessage}. 
+ * Sends a Firebase Cloud Message of type 'SOS' to carers within a 1000m radius
+ * of the user, using {@link sendFCMMessage}. 
  * 
  * @param {Object} data Data passed to the cloud function.
  * @param {functions.https.CallableContext} context User auth information.
@@ -50,6 +51,23 @@ function requestCarer(data, context) {
  */
 function sendSOS(data, context) {
     return sendFCMMessage(1000, 'SOS', 'Help is on the way', 'No carers found', data, context);
+}
+
+/**
+ * Notifies nearby carers that you no longer need help.
+ * 
+ * Sends a Firebase Cloud Message of type 'OK' to carers within a 2000m  radius
+ * of the user, using {@link sendFCMMessage}. 
+ * 
+ * @param {Object} data Data passed to the cloud function.
+ * @param {functions.https.CallableContext} context User auth information.
+ * 
+ * @returns {Promise} Promise object that represents either 'Carers have been
+ *     notified' (if the message was successfully sent) or 'No carers found' (if
+ *     there was no one to send the message to nearby).
+ */
+function sendOK(data, context) {
+    return sendFCMMessage(2000, 'OK', 'Carers have been notified', 'No carers found', data, context);
 }
 
 /**
@@ -229,18 +247,18 @@ function acceptCarerRequest(data, context) {
     var db = admin.firestore();
 
     var user = db.collection('users').doc(context.auth.uid).get()
-    .then(user => {
-        if (!user.exists) {
-            console.log('User not Found!');
-            return null;
-        } else {
-            console.log('User Found');
-            return user;
-        }
-    })
-    .catch(err => {
-        console.log('Error getting document', err);
-    });
+        .then(user => {
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
 
     var receiver = db.collection('users').doc(data.receiver).get()
         .then(receiver => {
