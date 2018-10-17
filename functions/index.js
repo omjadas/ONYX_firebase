@@ -12,6 +12,7 @@ exports.sendAnnotation = functions.https.onCall(sendAnnotation);
 exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
 exports.disconnect = functions.https.onCall(disconnect);
 exports.addContact = functions.https.onCall(addContact);
+exports.call = functions.https.oncall(call);
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate(chatNotification);
@@ -428,6 +429,84 @@ function addContact(data, context) {
             return data.email + ' already in contacts';
         })
         .catch();
+}
+
+/**
+ * Notifies the other user that they have an incoming call.
+ * 
+ * Sends a Firebase Cloud Message to the connected user notifying them of an
+ * incoming call.
+ * 
+ * @param {Object} data Data passed to the cloud function.
+ * @param {string} data.isConnected "true" if the user is connecting, "false"
+ *     otherwise.
+ * @param {functions.https.CallableContext} context User auth information.
+ * 
+ * @returns {Promise} Promise that represents either 'success' (if the user was
+ *     notified successfully), 'User not connected' (if the calling user was not
+ *     connected to start with). 
+ */
+function call(data, context) {
+    var db = admin.firestore()
+
+    var user = db.collection('users').doc(context.auth.uid).get()
+        .then(user => {
+            if (!user.exists) {
+                console.log('User not Found!');
+                return null;
+            } else {
+                console.log('User Found');
+                return user;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    var connectedUser = user
+        .then(user => {
+            return db.collection('users').doc(user.get('connectedUser')).get()
+        })
+        .then(connectedUser => {
+            if (!connectedUser.exists) {
+                console.log('Connected User not Found!');
+                return null;
+            } else {
+                console.log('Connected User Found');
+                return connectedUser;
+            }
+        })
+        .catch(err => {
+            console.log('Error getting document', err);
+        });
+
+    return Promise.all([user, connectedUser])
+        .then(([user, connectedUser]) => {
+            if (user.get('connectedUser') !== null) {
+                db.collection('users').doc(user.get('connectedUser')).update({ connectedUser: null });
+                db.collection('users').doc(context.auth.uid).update({ connectedUser: null });
+                var fcm = {
+                    data: {
+                        type: 'callConnected',
+                        isConnected: data.isConnected
+                    },
+                    token: connectedUser.get('firebaseToken')
+                }
+                return admin.messaging().send(fcm);
+            }
+            return 'User not connected'
+        })
+        .then(response => {
+            if (response === 'User not connected') {
+                return response;
+            }
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response);
+            return 'success';
+        })
+        .catch(error => {
+            console.log('Error sending message:', error);
+        });
 }
 
 /**
