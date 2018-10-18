@@ -12,7 +12,7 @@ exports.sendAnnotation = functions.https.onCall(sendAnnotation);
 exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
 exports.disconnect = functions.https.onCall(disconnect);
 exports.addContact = functions.https.onCall(addContact);
-exports.call = functions.https.oncall(call);
+exports.call = functions.https.onCall(call);
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate(chatNotification);
@@ -483,8 +483,6 @@ function call(data, context) {
     return Promise.all([user, connectedUser])
         .then(([user, connectedUser]) => {
             if (user.get('connectedUser') !== null) {
-                db.collection('users').doc(user.get('connectedUser')).update({ connectedUser: null });
-                db.collection('users').doc(context.auth.uid).update({ connectedUser: null });
                 var fcm = {
                     data: {
                         type: 'callConnected',
