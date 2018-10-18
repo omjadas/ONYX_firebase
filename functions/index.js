@@ -483,8 +483,6 @@ function call(data, context) {
     return Promise.all([user, connectedUser])
         .then(([user, connectedUser]) => {
             if (user.get('connectedUser') !== null) {
-                db.collection('users').doc(user.get('connectedUser')).update({ connectedUser: null });
-                db.collection('users').doc(context.auth.uid).update({ connectedUser: null });
                 var fcm = {
                     data: {
                         type: 'callConnected',
