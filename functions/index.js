@@ -12,7 +12,7 @@ exports.sendAnnotation = functions.https.onCall(sendAnnotation);
 exports.acceptCarerRequest = functions.https.onCall(acceptCarerRequest);
 exports.disconnect = functions.https.onCall(disconnect);
 exports.addContact = functions.https.onCall(addContact);
-exports.call = functions.https.oncall(call);
+exports.call = functions.https.onCall(call);
 exports.chatNotification = functions.firestore
     .document('chat_rooms/{chatId}/message/{messageId}')
     .onCreate(chatNotification);
